@@ -96,7 +96,7 @@ function onMessageArrived(message) {
 })(global, function LibraryFactory() {
 
 
-    var PahoMQTT = (function(wx) {
+    var PahoMQTT = (function() {
 
         // Private variables below, these are only visible inside the function closure
         // which is used to define the module.
@@ -767,16 +767,16 @@ function onMessageArrived(message) {
                 } else {
                     this.isReset = false;
                     this._client._trace("Pinger.doPing", "send PINGREQ");
-                    wx.sendSocketMessage({
+                    uni.sendSocketMessage({
                         data: pingReq,
                         success: function() {
-                            // 
+                            //
                         },
                         fail: function() {
-                            // 
+                            //
                         },
                         complete: function() {
-                            // 
+                            //
                         }
                     })
                     this.timeout = setTimeout(doTimeout(this), this._keepAliveInterval);
@@ -866,7 +866,7 @@ function onMessageArrived(message) {
 
 
             // Load the local state, if any, from the saved version, only restore state relevant to this client.
-            for (var key in wx.getStorageInfoSync().keys)
+            for (var key in uni.getStorageInfoSync().keys)
                 if (key.indexOf("Sent:" + this._localKey) === 0 || key.indexOf("Received:" + this
                         ._localKey) === 0)
                     this.restore(key);
@@ -1115,15 +1115,23 @@ function onMessageArrived(message) {
             this._wsuri = wsurl;
             this.connected = false;
 
-            wx.connectSocket({
-                url: wsurl,
-                protocols: ['mqtt']
+            uni.connectSocket({
+                url: 'ws://test.mosquitto.org:8080/mqtt', // wsurl,
+                protocols: ['mqtt'],
+                success: (result) => {
+                    this.connectOptions?.onSuccess(result);
+                    this._trace("uni.connectSocket success");
+                },
+                fail: (result) => {
+                    this.connectOptions?.onFailure(result);
+                    this._trace(`uni.connectSocket fail: ${JSON.stringify(result)}`);
+                }
             });
 
-            wx.onSocketOpen(scope(this._on_socket_open, this))
-            wx.onSocketMessage(scope(this._on_socket_message, this))
-            wx.onSocketError(scope(this._on_socket_error, this))
-            wx.onSocketClose(scope(this._on_socket_close, this))
+            uni.onSocketOpen(scope(this._on_socket_open, this))
+            uni.onSocketMessage(scope(this._on_socket_message, this))
+            uni.onSocketError(scope(this._on_socket_error, this))
+            uni.onSocketClose(scope(this._on_socket_close, this))
 
             this.sendPinger = new Pinger(this, this.connectOptions.keepAliveInterval);
             this.receivePinger = new Pinger(this, this.connectOptions.keepAliveInterval);
@@ -1194,7 +1202,7 @@ function onMessageArrived(message) {
                     throw Error(format(ERROR.INVALID_STORED_DATA, [key, storedMessage]));
             }
             try {
-                wx.setStorageSync(prefix + this._localKey + wireMessage.messageIdentifier, JSON
+                uni.setStorageSync(prefix + this._localKey + wireMessage.messageIdentifier, JSON
                     .stringify(storedMessage));
             } catch (e) {
 
@@ -1202,7 +1210,7 @@ function onMessageArrived(message) {
         };
 
         ClientImpl.prototype.restore = function(key) {
-            var value = wx.getStorageSync(key);
+            var value = uni.getStorageSync(key);
             var storedMessage = JSON.parse(value);
 
             var wireMessage = new WireMessage(storedMessage.type, storedMessage);
@@ -1288,6 +1296,7 @@ function onMessageArrived(message) {
          */
         ClientImpl.prototype._on_socket_open = function(res) {
             // Create the CONNECT message object.
+            this._trace("Client._on_socket_open");
             var wireMessage = new WireMessage(MESSAGE_TYPE.CONNECT, this.connectOptions);
             wireMessage.clientId = this.clientId;
             this._socket_send(wireMessage);
@@ -1356,14 +1365,14 @@ function onMessageArrived(message) {
                         if (this.connectOptions.cleanSession) {
                             for (var key in this._sentMessages) {
                                 var sentMessage = this._sentMessages[key];
-                                wx.removeStorageSync("Sent:" + this._localKey + sentMessage
+                                uni.removeStorageSync("Sent:" + this._localKey + sentMessage
                                     .messageIdentifier);
                             }
                             this._sentMessages = {};
 
                             for (var key in this._receivedMessages) {
                                 var receivedMessage = this._receivedMessages[key];
-                                wx.removeStorageSync("Received:" + this._localKey + receivedMessage
+                                uni.removeStorageSync("Received:" + this._localKey + receivedMessage
                                     .messageIdentifier);
                             }
                             this._receivedMessages = {};
@@ -1452,7 +1461,7 @@ function onMessageArrived(message) {
                         // If this is a re flow of a PUBACK after we have restarted receivedMessage will not exist.
                         if (sentMessage) {
                             delete this._sentMessages[wireMessage.messageIdentifier];
-                            wx.removeStorageSync("Sent:" + this._localKey + wireMessage
+                            uni.removeStorageSync("Sent:" + this._localKey + wireMessage
                                 .messageIdentifier);
                             if (this.onMessageDelivered)
                                 this.onMessageDelivered(sentMessage.payloadMessage);
@@ -1474,7 +1483,7 @@ function onMessageArrived(message) {
 
                     case MESSAGE_TYPE.PUBREL:
                         var receivedMessage = this._receivedMessages[wireMessage.messageIdentifier];
-                        wx.removeStorageSync("Received:" + this._localKey + wireMessage
+                        uni.removeStorageSync("Received:" + this._localKey + wireMessage
                             .messageIdentifier);
                         // If this is a re flow of a PUBREL after we have restarted receivedMessage will not exist.
                         if (receivedMessage) {
@@ -1493,7 +1502,7 @@ function onMessageArrived(message) {
                     case MESSAGE_TYPE.PUBCOMP:
                         var sentMessage = this._sentMessages[wireMessage.messageIdentifier];
                         delete this._sentMessages[wireMessage.messageIdentifier];
-                        wx.removeStorageSync("Sent:" + this._localKey + wireMessage.messageIdentifier);
+                        uni.removeStorageSync("Sent:" + this._localKey + wireMessage.messageIdentifier);
                         if (this.onMessageDelivered)
                             this.onMessageDelivered(sentMessage.payloadMessage);
                         break;
@@ -1555,6 +1564,8 @@ function onMessageArrived(message) {
 
         /** @ignore */
         ClientImpl.prototype._on_socket_error = function(error) {
+            if (error) this._trace("Client._on_socket_error " + JSON.stringify(error));
+            else this._trace("Client._on_socket_error with empty error");
             if (!this._reconnecting) {
                 this._disconnected(ERROR.SOCKET_ERROR.code, format(ERROR.SOCKET_ERROR, [error.data]));
             }
@@ -1562,6 +1573,7 @@ function onMessageArrived(message) {
 
         /** @ignore */
         ClientImpl.prototype._on_socket_close = function() {
+            this._trace("Client._on_socket_close");
             if (!this._reconnecting) {
                 this._disconnected(ERROR.SOCKET_CLOSE.code, format(ERROR.SOCKET_CLOSE));
             }
@@ -1575,16 +1587,16 @@ function onMessageArrived(message) {
                 this._trace("Client._socket_send", wireMessageMasked);
             } else this._trace("Client._socket_send", wireMessage);
 
-            wx.sendSocketMessage({
+            uni.sendSocketMessage({
                 data: wireMessage.encode(),
-                success: function() {
-                    // 
+                success: (result) => {
+                    this._trace("uni.sendSocketMessage success");
                 },
-                fail: function() {
-                    // 
+                fail: (result) => {
+                    this._trace("uni.sendSocketMessage fail");
                 },
-                complete: function() {
-                    // 
+                complete: (result) => {
+                    //
                 }
             })
             /* We have proved to the server we are alive. */
@@ -1746,11 +1758,7 @@ function onMessageArrived(message) {
         ClientImpl.prototype._trace = function() {
             // Pass trace message back to client's callback function
             if (this.traceFunction) {
-                for (var i in arguments) {
-                    if (typeof arguments[i] !== "undefined")
-                        arguments.splice(i, 1, JSON.stringify(arguments[i]));
-                }
-                var record = Array.prototype.slice.call(arguments).join("");
+                const record = Array.from(arguments).map(arg => JSON.stringify(arg)).join('');
                 this.traceFunction({
                     severity: "Debug",
                     message: record
@@ -2378,7 +2386,7 @@ function onMessageArrived(message) {
              * @throws {InvalidState} if the client is not connected.
              */
             this.publish = function(topic, payload, qos, retained) {
-                console.log("Publising message to: ", topic);
+                this._trace("Publising message to: ", topic);
                 var message;
 
                 if (arguments.length === 0) {
@@ -2699,6 +2707,6 @@ function onMessageArrived(message) {
             Client: Client,
             Message: Message
         };
-    })(wx);
+    })();
     return PahoMQTT;
 });
