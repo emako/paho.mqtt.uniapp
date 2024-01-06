@@ -1116,7 +1116,7 @@ function onMessageArrived(message) {
             this.connected = false;
 
             uni.connectSocket({
-                url: 'ws://test.mosquitto.org:8080/mqtt', // wsurl,
+                url: wsurl,
                 protocols: ['mqtt'],
                 success: (result) => {
                     this.connectOptions?.onSuccess(result);
