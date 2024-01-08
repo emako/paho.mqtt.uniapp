@@ -1,12 +1,14 @@
 {
   "name": "paho.mqtt.uniapp",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Pre reqs for the Paho JS client",
-  "main": "./src/paho-mqtt.js",
+  "main": "./paho-mqtt.js",
   "keywords": [],
   "author": "emako",
   "bugs": {
-    "url": "https://github.com/emako/paho.mqtt.uniapp/issues"
+      "url": "https://github.com/emako/paho.mqtt.uniapp/issues"
   },
-  "homepage": "https://github.com/emako/paho.mqtt.uniapp"
+  "homepage": "https://github.com/emako/paho.mqtt.uniapp",
+  "typeScriptVersion": "4.5",
+  "types": "paho-mqtt.d.ts"
 }
