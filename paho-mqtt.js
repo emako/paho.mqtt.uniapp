@@ -1115,23 +1115,31 @@ function onMessageArrived(message) {
             this._wsuri = wsurl;
             this.connected = false;
 
-            uni.connectSocket({
+            var socketTask = uni.connectSocket({
                 url: wsurl,
                 protocols: ['mqtt'],
                 success: (result) => {
-                    this.connectOptions?.onSuccess(result);
+                    if (this.connectOptions.onSuccess) {
+                        this.connectOptions.onSuccess({
+                            invocationContext: result ?? 'connectSocket'
+                        });
+                    }
                     this._trace("uni.connectSocket success");
                 },
                 fail: (result) => {
-                    this.connectOptions?.onFailure(result);
+                    if (this.connectOptions.onFailure) {
+                        this.connectOptions.onFailure({
+                            invocationContext: result ?? 'connectSocket'
+                        });
+                    }
                     this._trace(`uni.connectSocket fail: ${JSON.stringify(result)}`);
                 }
             });
 
-            uni.onSocketOpen(scope(this._on_socket_open, this))
-            uni.onSocketMessage(scope(this._on_socket_message, this))
-            uni.onSocketError(scope(this._on_socket_error, this))
-            uni.onSocketClose(scope(this._on_socket_close, this))
+            socketTask.onOpen(scope(this._on_socket_open, this))
+            socketTask.onMessage(scope(this._on_socket_message, this))
+            socketTask.onError(scope(this._on_socket_error, this))
+            socketTask.onClose(scope(this._on_socket_close, this))
 
             this.sendPinger = new Pinger(this, this.connectOptions.keepAliveInterval);
             this.receivePinger = new Pinger(this, this.connectOptions.keepAliveInterval);
@@ -1434,7 +1442,7 @@ function onMessageArrived(message) {
                         // reconnect and which URI was successfully connected to.
                         if (this.connectOptions.onSuccess) {
                             this.connectOptions.onSuccess({
-                                invocationContext: this.connectOptions.invocationContext
+                                invocationContext: this.connectOptions.invocationContext ?? { errMsg: "an automatic reconnect successfully" }
                             });
                         }
 
