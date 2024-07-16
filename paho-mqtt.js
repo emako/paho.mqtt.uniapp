@@ -1442,7 +1442,9 @@ function onMessageArrived(message) {
                         // reconnect and which URI was successfully connected to.
                         if (this.connectOptions.onSuccess) {
                             this.connectOptions.onSuccess({
-                                invocationContext: this.connectOptions.invocationContext ?? { errMsg: "an automatic reconnect successfully" }
+                                invocationContext: this.connectOptions.invocationContext ?? {
+                                    errMsg: "an automatic reconnect successfully"
+                                }
                             });
                         }
 

@@ -59,7 +59,7 @@ declare global {
              */
             invocationContext: any;
         }
-        interface ErrorWithInvocationContext extends MQTTError, WithInvocationContext {}
+        interface ErrorWithInvocationContext extends MQTTError, WithInvocationContext { }
         interface OnSubscribeSuccessParams extends WithInvocationContext {
             grantedQos: Qos;
         }
@@ -218,7 +218,7 @@ declare global {
         }
 
         interface TraceElement {
-            severity: "Debug";
+            severity: 'Debug';
             message: string;
         }
 
