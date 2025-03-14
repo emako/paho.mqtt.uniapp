@@ -178,6 +178,11 @@ declare global {
              */
             reconnect?: boolean | undefined;
             /**
+             * Specify the waiting interval for reconnection.
+             * If present, force replace the automatic calculation interval of internal.
+             */
+            reconnectInterval?: number | undefined;
+            /**
              * If present, should contain a list of fully qualified WebSocket
              * uris (e.g. ws://mqtt.eclipseprojects.io:80/mqtt), that are tried
              * in order in place of the host and port parameter of the

@@ -800,8 +800,7 @@ function onMessageArrived(message) {
          * @ignore
          */
         var Timeout = function(client, timeoutSeconds, action, args) {
-            if (!timeoutSeconds)
-                timeoutSeconds = 30;
+            timeoutSeconds = timeoutSeconds ?? 30;
 
             var doTimeout = function(action, client, args) {
                 return function() {
@@ -1673,7 +1672,9 @@ function onMessageArrived(message) {
                 this._reconnecting = true;
                 this.sendPinger.cancel();
                 this.receivePinger.cancel();
-                if (this._reconnectInterval < 128)
+                if (this.connectOptions.reconnectInterval >= 0)
+                    this._reconnectInterval = this.connectOptions.reconnectInterval;
+                else if (this._reconnectInterval < 128)
                     this._reconnectInterval = this._reconnectInterval * 2;
                 if (this.connectOptions.uris) {
                     this.hostIndex = 0;
@@ -2108,6 +2109,7 @@ function onMessageArrived(message) {
                     hosts: "object",
                     ports: "object",
                     reconnect: "boolean",
+                    reconnectInterval: "number",
                     mqttVersion: "number",
                     mqttVersionExplicit: "boolean",
                     uris: "object"
