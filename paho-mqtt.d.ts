@@ -106,6 +106,13 @@ declare global {
         type OnMessageHandler = (message: Message) => void;
 
         /**
+         * Called when client has connected.
+         * @param reconnect that indicate if this was a result of reconnect operation.
+         * @param uri which is the fully qualified WebSocket URI of the server.
+         */
+        type OnConnectedHandler = (reconnect: boolean, uri: string) => void;
+
+        /**
          * Attributes used with a connection.
          */
         interface ConnectionOptions {
@@ -258,6 +265,17 @@ declare global {
 
             /** function called with trace information, if set */
             trace?: TraceFunction | undefined;
+
+            /**
+             * called when a connection is successfully made to the server.
+             * after a connect() method.
+             * Parameters passed to the onConnected callback are:
+             * <ol>
+             * <li>reconnect (boolean) - If true, the connection was the result of a reconnect.</li>
+             * <li>URI (string) - The URI used to connect to the server.</li>
+             * </ol>
+             */
+            onConnected: OnConnectedHandler;
 
             /**
              * called when a connection has been lost. after a connect() method has succeeded.
