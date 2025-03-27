@@ -354,6 +354,11 @@ declare global {
             isConnected(): boolean;
 
             /**
+             * @returns Used to check whether the automatic reconnect process should be disabled after calling disconnect().
+             */
+            isReconnectDisabled(): boolean;
+
+            /**
              * Get the contents of the trace log.
              *
              *  @return tracebuffer containing the time ordered trace records.

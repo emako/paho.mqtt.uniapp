@@ -903,6 +903,7 @@ function onMessageArrived(message) {
         ClientImpl.prototype._reconnectInterval = 1; // Reconnect Delay, starts at 1 second
         ClientImpl.prototype._reconnecting = false;
         ClientImpl.prototype._reconnectTimeout = null;
+        ClientImpl.prototype._reconnectDisabled = false; // Used to disable the automatic reconnect process after disconnect()
         ClientImpl.prototype.disconnectedPublishing = false;
         ClientImpl.prototype.disconnectedBufferSize = 5000;
 
@@ -920,7 +921,7 @@ function onMessageArrived(message) {
 
             if (this._reconnecting) {
                 // connect() function is called while reconnect is in progress.
-                // Terminate the auto reconnect process to use new connect options.
+                // Terminate the automatic reconnect process to use new connect options.
                 this._reconnectTimeout.cancel();
                 this._reconnectTimeout = null;
                 this._reconnecting = false;
@@ -929,6 +930,7 @@ function onMessageArrived(message) {
             this.connectOptions = connectOptions;
             this._reconnectInterval = 1;
             this._reconnecting = false;
+            this._reconnectDisabled = false;
             if (connectOptions.uris) {
                 this.hostIndex = 0;
                 this._doConnect(connectOptions.uris[0]);
@@ -1059,9 +1061,12 @@ function onMessageArrived(message) {
         ClientImpl.prototype.disconnect = function() {
             this._trace("Client.disconnect");
 
+            // The user actively disconnect(), so the automatic reconnect process must be forcibly stopped.
+            this._reconnectDisabled = true;
+
             if (this._reconnecting) {
                 // disconnect() function is called while reconnect is in progress.
-                // Terminate the auto reconnect process.
+                // Terminate the automatic reconnect process.
                 this._reconnectTimeout.cancel();
                 this._reconnectTimeout = null;
                 this._reconnecting = false;
@@ -1668,6 +1673,10 @@ function onMessageArrived(message) {
          */
         ClientImpl.prototype._reconnect = function() {
             this._trace("Client._reconnect");
+
+            // Stop automatic reconnect process after disconnect().
+            if (this._reconnectDisabled) return;
+
             if (!this.connected) {
                 this._reconnecting = true;
                 this.sendPinger.cancel();
@@ -1695,8 +1704,8 @@ function onMessageArrived(message) {
         ClientImpl.prototype._disconnected = function(errorCode, errorText) {
             this._trace("Client._disconnected", errorCode, errorText);
 
-            if (errorCode !== undefined && this._reconnecting) {
-                //Continue automatic reconnect process
+            if (errorCode !== undefined && this._reconnecting && !this._reconnectDisabled) {
+                // Continue automatic reconnect process.
                 this._reconnectTimeout = new Timeout(this, this._reconnectInterval, this._reconnect);
                 return;
             }
@@ -1712,8 +1721,8 @@ function onMessageArrived(message) {
             this._msg_queue = [];
             this._buffered_msg_queue = [];
             this._notify_msg_sent = {};
-
-            if (this.connectOptions.uris && this.hostIndex < this.connectOptions.uris.length - 1) {
+            
+            if (!this._reconnectDisabled && this.connectOptions.uris && this.hostIndex < this.connectOptions.uris.length - 1) {
                 // Try the next host.
                 this.hostIndex++;
                 this._doConnect(this.connectOptions.uris[this.hostIndex]);
@@ -1736,7 +1745,7 @@ function onMessageArrived(message) {
                             uri: this._wsuri
                         });
                     }
-                    if (errorCode !== ERROR.OK.code && this.connectOptions.reconnect) {
+                    if (!this._reconnectDisabled && errorCode !== ERROR.OK.code && this.connectOptions.reconnect) {
                         // Start automatic reconnect process for the very first time since last successful connect.
                         this._reconnectInterval = 1;
                         this._reconnect();
@@ -1745,7 +1754,7 @@ function onMessageArrived(message) {
                 } else {
                     // Otherwise we never had a connection, so indicate that the connect has failed.
                     if (this.connectOptions.mqttVersion === 4 && this.connectOptions
-                        .mqttVersionExplicit === false) {
+                        .mqttVersionExplicit === false && !this._reconnectDisabled) {
                         this._trace("Failed to connect V4, dropping back to V3");
                         this.connectOptions.mqttVersion = 3;
                         if (this.connectOptions.uris) {
@@ -1802,7 +1811,7 @@ function onMessageArrived(message) {
             }
             return traceObjectMasked;
         };
-
+        
         // ------------------------------------------------------------------------
         // Public Programming interface.
         // ------------------------------------------------------------------------
@@ -2472,6 +2481,13 @@ function onMessageArrived(message) {
 
             this.isConnected = function() {
                 return client.connected;
+            };
+
+            /**
+             * Used to check whether the automatic reconnect process should be disabled after calling disconnect().
+             */
+            this.isReconnectDisabled = function() {
+                return client._reconnectDisabled;
             };
         };
 
