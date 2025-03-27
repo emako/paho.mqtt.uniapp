@@ -1,6 +1,6 @@
 {
   "name": "paho.mqtt.uniapp",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Pre reqs for the Paho JS/TS client in uni-app",
   "main": "./paho-mqtt.js",
   "keywords": [],
